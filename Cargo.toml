@@ -1,0 +1,33 @@
+[package]
+name = "thefuck"
+version = "3.32.0"
+edition = "2021"
+rust-version = "1.87"
+description = "Magnificent app which corrects your previous console command"
+license = "MIT"
+repository = "https://github.com/johannSo/thefuck-rs"
+readme = "README.md"
+default-run = "thefuck"
+
+[lib]
+name = "thefuck"
+path = "src/lib.rs"
+
+[[bin]]
+name = "thefuck"
+path = "src/main.rs"
+
+# Shown when the `fuck` alias isn't configured yet; the shell alias shadows it.
+[[bin]]
+name = "fuck"
+path = "src/bin/fuck.rs"
+
+[dependencies]
+libc = "0.2"
+regex = "1"
+serde_json = "1"
+vt100 = "0.15"
+
+[profile.release]
+lto = true
+codegen-units = 1

@@ -104,6 +104,46 @@ Reading package lists... Done
 9. [Developing](#developing)
 10. [License](#license-mit)
 
+## Rust implementation
+
+This repository also contains a port of *The Fuck* to Rust (`Cargo.toml`, `src/`).
+It is a drop-in replacement for the Python version: the same `thefuck` and `fuck`
+commands, the same shell aliases, rules, settings and environment variables.
+
+Install it with the script, which builds it with [cargo](https://doc.rust-lang.org/cargo/):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/johannSo/thefuck-rs/master/install.sh | sh
+```
+
+or from a checkout of this repository:
+
+```bash
+cargo install --path .
+```
+
+and then set up the alias exactly as described [below](#installation), for example
+`eval "$(thefuck --alias)"` in your `.bashrc`.
+
+What is different from the Python version:
+
+* rules are compiled in: rules written in Python (`~/.config/thefuck/rules` and
+  `thefuck_contrib_*` packages) are not loaded, a new rule is a module in `src/rules`;
+* `settings.py` is read, not executed: plain assignments of strings, numbers, booleans,
+  lists and dicts work (so does `DEFAULT_RULES + [...]`), arbitrary Python code doesn't;
+* the `apt_get` rule asks `/usr/lib/command-not-found` for the package, instead of
+  importing the `CommandNotFound` Python module;
+* `fix_file` no longer suggests opening `/bin/sh` in the editor for every
+  "command not found" error;
+* a rule failing on unexpected output is reported and skipped, it never aborts the fix;
+* only Unix-like systems are supported, there's no native Windows build.
+
+Run the tests with `cargo test`. They include the cases of the Python test suite for
+every rule that depends only on the command and its output
+(`src/rules/testdata/python_cases.json`).
+
+##### [Back to Contents](#contents)
+
 ## Requirements
 
 - python (3.5+)

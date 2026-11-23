@@ -127,10 +127,6 @@ pub fn how_to_configure_alias(configuration_details: Option<&ShellConfiguration>
             path = details.path,
             reload = details.reload
         );
-
-        if details.can_configure_automatically {
-            println!("Or run {bold}fuck{reset} a second time to configure it automatically.");
-        }
     }
 
     println!("More details - https://github.com/nvbn/thefuck#manual-installation");
@@ -148,8 +144,9 @@ pub fn already_configured(configuration_details: &ShellConfiguration) {
 
 pub fn configured_successfully(configuration_details: &ShellConfiguration) {
     println!(
-        "{bold}fuck{reset} alias configured successfully!\n\
-         For applying changes run {bold}{reload}{reset} or restart your shell.",
+        "{bold}fuck{reset} alias added to {bold}{path}{reset}!\n\
+         To use it in this shell run {bold}{reload}{reset}, new shells have it already.",
+        path = configuration_details.path,
         bold = color(BRIGHT),
         reset = color(RESET_ALL),
         reload = configuration_details.reload

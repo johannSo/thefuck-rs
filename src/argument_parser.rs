@@ -7,7 +7,7 @@ use crate::utils::get_alias;
 const USAGE: &str = "\
 usage: thefuck [-v] [-a [ALIAS]] [-l SHELL_LOGGER]
                [--enable-experimental-instant-mode] [-h] [-y | -r] [-d]
-               [command ...]
+               [--update] [command ...]
 ";
 
 const HELP: &str = "
@@ -26,6 +26,7 @@ options:
                         execute fixed command without confirmation
   -r, --repeat          repeat on failure
   -d, --debug           enable debug output
+  --update              update The Fuck to the latest version
 ";
 
 #[derive(Debug, Default, Clone, PartialEq)]
@@ -38,6 +39,7 @@ pub struct Args {
     pub yes: bool,
     pub repeat: bool,
     pub debug: bool,
+    pub update: bool,
     pub force_command: Option<String>,
     pub command: Vec<String>,
 }
@@ -52,6 +54,7 @@ enum Opt {
     Yes,
     Repeat,
     Debug,
+    Update,
     ForceCommand,
 }
 
@@ -66,6 +69,7 @@ const LONG_OPTIONS: &[(&str, Opt)] = &[
     ("hard", Opt::Yes),
     ("repeat", Opt::Repeat),
     ("debug", Opt::Debug),
+    ("update", Opt::Update),
     ("force-command", Opt::ForceCommand),
 ];
 
@@ -90,6 +94,7 @@ impl Opt {
             Opt::Yes => "-y/--yes/--yeah/--hard",
             Opt::Repeat => "-r/--repeat",
             Opt::Debug => "-d/--debug",
+            Opt::Update => "--update",
             Opt::ForceCommand => "--force-command",
         }
     }
@@ -220,6 +225,7 @@ pub fn parse(argv: &[String]) -> Result<Args, String> {
                 Opt::Repeat if args.yes => return conflict(Opt::Yes),
                 Opt::Repeat => args.repeat = true,
                 Opt::Debug => args.debug = true,
+                Opt::Update => args.update = true,
                 Opt::ShellLogger | Opt::ForceCommand => {
                     let Some(value) = value else {
                         return Err(format!("argument {}: expected one argument", opt.display()));
@@ -299,6 +305,16 @@ mod tests {
                 yes: true,
                 ..Args::default()
             }
+        );
+        let update = Args {
+            update: true,
+            ..Args::default()
+        };
+        assert_eq!(parse_args(&["--update"]).unwrap(), update);
+        // `fuck --update` through the alias.
+        assert_eq!(
+            parse_args(&[ARGUMENT_PLACEHOLDER, "--update"]).unwrap(),
+            update
         );
         assert_eq!(
             parse_args(&["--rep"]).unwrap(),

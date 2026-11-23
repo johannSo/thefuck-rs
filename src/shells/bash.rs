@@ -15,6 +15,37 @@ fn parse_alias(alias: &str) -> Option<(String, String)> {
     Some((name.to_string(), unquote(value).to_string()))
 }
 
+#[derive(Debug, PartialEq)]
+enum BashConfig {
+    Existing(&'static str),
+    Create(&'static str),
+    Unknown,
+}
+
+/// Returns the config file the alias belongs to.
+///
+/// Terminals of macOS start login shells, which read only the first existing
+/// of `~/.bash_profile`, `~/.bash_login` and `~/.profile`, never `~/.bashrc`.
+/// When none exists `~/.bash_profile` is created; it isn't when `~/.profile`
+/// exists, as bash would stop reading `~/.profile` then.
+///
+/// Elsewhere terminals start interactive non-login shells, reading
+/// `~/.bashrc`.
+fn config_file(macos: bool, exists: impl Fn(&str) -> bool) -> BashConfig {
+    if macos {
+        ["~/.bash_profile", "~/.bash_login", "~/.profile"]
+            .into_iter()
+            .find(|config| exists(config))
+            .map_or(BashConfig::Create("~/.bash_profile"), BashConfig::Existing)
+    } else if exists("~/.bashrc") {
+        BashConfig::Existing("~/.bashrc")
+    } else if exists("~/.bash_profile") {
+        BashConfig::Existing("~/.bash_profile")
+    } else {
+        BashConfig::Unknown
+    }
+}
+
 impl Shell for Bash {
     fn friendly_name(&self) -> &'static str {
         "Bash"
@@ -69,19 +100,21 @@ impl Shell for Bash {
     }
 
     fn how_to_configure(&self) -> Option<ShellConfiguration> {
-        let config = if expanduser("~/.bashrc").exists() {
-            "~/.bashrc"
-        } else if expanduser("~/.bash_profile").exists() {
-            "~/.bash_profile"
-        } else {
-            "bash config"
-        };
-
-        Some(ShellConfiguration::new(
-            "eval \"$(thefuck --alias)\"",
-            config,
-            &format!("source {}", config),
-        ))
+        let content = "eval \"$(thefuck --alias)\"";
+        let exists = |path: &str| expanduser(path).exists();
+        Some(match config_file(cfg!(target_os = "macos"), exists) {
+            BashConfig::Existing(config) => {
+                ShellConfiguration::new(content, config, &format!("source {}", config))
+            }
+            BashConfig::Create(config) => ShellConfiguration::created_if_missing(
+                content,
+                config,
+                &format!("source {}", config),
+            ),
+            BashConfig::Unknown => {
+                ShellConfiguration::new(content, "bash config", "source bash config")
+            }
+        })
     }
 
     fn version(&self) -> String {
@@ -128,6 +161,42 @@ mod tests {
         assert!(alias.contains("TF_ALIAS=fix"));
         assert!(alias.contains("thefuck THEFUCK_ARGUMENT_PLACEHOLDER \"$@\""));
         assert!(alias.contains("history -s $TF_CMD;"));
+    }
+
+    #[test]
+    fn picks_config_file() {
+        let with = |files: &'static [&'static str]| move |path: &str| files.contains(&path);
+        // macOS reads only the login files.
+        assert_eq!(
+            config_file(true, with(&[])),
+            BashConfig::Create("~/.bash_profile")
+        );
+        assert_eq!(
+            config_file(true, with(&["~/.bashrc"])),
+            BashConfig::Create("~/.bash_profile")
+        );
+        assert_eq!(
+            config_file(true, with(&["~/.bashrc", "~/.profile"])),
+            BashConfig::Existing("~/.profile")
+        );
+        assert_eq!(
+            config_file(true, with(&["~/.profile", "~/.bash_login"])),
+            BashConfig::Existing("~/.bash_login")
+        );
+        assert_eq!(
+            config_file(true, with(&["~/.profile", "~/.bash_profile"])),
+            BashConfig::Existing("~/.bash_profile")
+        );
+        // Linux and the rest.
+        assert_eq!(
+            config_file(false, with(&["~/.bashrc", "~/.bash_profile"])),
+            BashConfig::Existing("~/.bashrc")
+        );
+        assert_eq!(
+            config_file(false, with(&["~/.bash_profile"])),
+            BashConfig::Existing("~/.bash_profile")
+        );
+        assert_eq!(config_file(false, with(&[])), BashConfig::Unknown);
     }
 
     #[test]

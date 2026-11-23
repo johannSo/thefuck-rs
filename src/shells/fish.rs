@@ -142,7 +142,7 @@ impl Shell for Fish {
     }
 
     fn how_to_configure(&self) -> Option<ShellConfiguration> {
-        Some(ShellConfiguration::new(
+        Some(ShellConfiguration::created_if_missing(
             "thefuck --alias | source",
             "~/.config/fish/config.fish",
             "fish",

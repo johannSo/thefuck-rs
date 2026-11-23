@@ -80,10 +80,6 @@ pub const SETTINGS_TEMPLATE: &str = "# The Fuck settings file
 
 pub const ARGUMENT_PLACEHOLDER: &str = "THEFUCK_ARGUMENT_PLACEHOLDER";
 
-/// Seconds between two runs of unconfigured `fuck` that still count as
-/// "running it a second time".
-pub const CONFIGURATION_TIMEOUT: f64 = 60.0;
-
 /// Ten zero-width spaces, used to find user commands in the instant mode log.
 pub const USER_COMMAND_MARK: &str =
     "\u{200B}\u{200B}\u{200B}\u{200B}\u{200B}\u{200B}\u{200B}\u{200B}\u{200B}\u{200B}";

@@ -25,6 +25,15 @@ impl ShellConfiguration {
             can_configure_automatically: expanduser(path).exists(),
         }
     }
+
+    /// For a config file that's fine to create when it doesn't exist yet,
+    /// one the shell always reads, like `~/.zshrc`. A fresh macOS has none.
+    pub(super) fn created_if_missing(content: &str, path: &str, reload: &str) -> Self {
+        ShellConfiguration {
+            can_configure_automatically: true,
+            ..Self::new(content, path, reload)
+        }
+    }
 }
 
 pub trait Shell: Send + Sync {

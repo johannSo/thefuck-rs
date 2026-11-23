@@ -116,14 +116,28 @@ Install it with the script, which builds it with [cargo](https://doc.rust-lang.o
 curl -fsSL https://raw.githubusercontent.com/johannSo/thefuck-rs/master/install.sh | sh
 ```
 
-or from a checkout of this repository:
+It adds the alias (and `~/.cargo/bin` to `PATH`, when it's missing) to the config of your
+shell and starts a fresh shell, so `fuck` works right away. `THEFUCK_NO_SHELL_CONFIG=1`
+leaves the shell config alone, `THEFUCK_NO_NEW_SHELL=1` skips the fresh shell.
+
+It works on Linux and macOS (Apple Silicon and Intel). On macOS, building needs the Xcode
+Command Line Tools (`xcode-select --install`), and the alias goes where macOS terminals
+read it: `~/.zshrc` for zsh (created when missing, a fresh Mac has none), and for bash the
+login config, `~/.bash_profile` (or `~/.bash_login` / `~/.profile` when you already use
+one of them), as bash in macOS terminals never reads `~/.bashrc`.
+
+Or from a checkout of this repository:
 
 ```bash
 cargo install --path .
 ```
 
-and then set up the alias exactly as described [below](#installation), for example
-`eval "$(thefuck --alias)"` in your `.bashrc`.
+and then run `fuck` once: without the alias it adds it to your shell config itself
+(or set it up as described [below](#installation)).
+
+To update, run `fuck --update`. It installs the latest version from the repository with
+cargo, to where it's installed now, and only rebuilds when there's something new
+(`THEFUCK_REPOSITORY` points it to a fork).
 
 What is different from the Python version:
 
@@ -136,7 +150,12 @@ What is different from the Python version:
 * `fix_file` no longer suggests opening `/bin/sh` in the editor for every
   "command not found" error;
 * a rule failing on unexpected output is reported and skipped, it never aborts the fix;
-* only Unix-like systems are supported, there's no native Windows build.
+* `no_command` fixes a mistyped subcommand together with the application, `gti atus`
+  becomes `git status` at once (for `git`, `hub` and `cargo`, their subcommands are listed
+  without running the mistyped command);
+* `fuck` without the alias configures it on the first run, not the second;
+* only Unix-like systems are supported (Linux, macOS, the BSDs), there's no native Windows
+  build.
 
 Run the tests with `cargo test`. They include the cases of the Python test suite for
 every rule that depends only on the command and its output

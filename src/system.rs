@@ -165,14 +165,11 @@ fn processes_from_proc() -> Option<Vec<Process>> {
     (!processes.is_empty()).then_some(processes)
 }
 
-fn processes_from_ps() -> Vec<Process> {
-    let output = Command::new("ps")
-        .args(["-A", "-o", "pid=,ppid=,comm="])
-        .stdin(Stdio::null())
-        .stderr(Stdio::null())
-        .output();
-    let Ok(output) = output else { return vec![] };
-    String::from_utf8_lossy(&output.stdout)
+/// Parses `ps -A -o pid=,ppid=,comm=`. On macOS and the BSDs `comm` is the
+/// full path of the executable (`/bin/zsh`), and login shells, which macOS
+/// terminals start, are named with a leading dash (`-zsh`).
+fn parse_ps(output: &str) -> Vec<Process> {
+    output
         .lines()
         .filter_map(|line| {
             let mut fields = line.split_whitespace();
@@ -187,6 +184,17 @@ fn processes_from_ps() -> Vec<Process> {
             Some((pid, ppid, name.to_string()))
         })
         .collect()
+}
+
+/// Used where there's no `/proc`, like on macOS.
+fn processes_from_ps() -> Vec<Process> {
+    let output = Command::new("ps")
+        .args(["-A", "-o", "pid=,ppid=,comm="])
+        .stdin(Stdio::null())
+        .stderr(Stdio::null())
+        .output();
+    let Ok(output) = output else { return vec![] };
+    parse_ps(&String::from_utf8_lossy(&output.stdout))
 }
 
 /// Returns all running processes.
@@ -224,4 +232,36 @@ pub fn descendants(pid: u32) -> Vec<u32> {
         }
     }
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_ps_output_of_macos() {
+        let output = "    1     0 /sbin/launchd\n\
+                      \x20 512     1 /System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal\n\
+                      \x20 640   512 login\n\
+                      \x20 641   640 -zsh\n\
+                      \x20 700   641 /bin/bash\n\
+                      \x20 701   700 /Applications/Visual Studio Code.app/Contents/MacOS/Electron\n\
+                      \x20 702   700 /Users/me/.cargo/bin/thefuck\n";
+        let processes = parse_ps(output);
+        assert_eq!(processes.len(), 7);
+        assert_eq!(processes[0], (1, 0, "launchd".to_string()));
+        assert_eq!(processes[3], (641, 640, "zsh".to_string()));
+        assert_eq!(processes[4], (700, 641, "bash".to_string()));
+        assert_eq!(processes[5], (701, 700, "Electron".to_string()));
+        assert_eq!(processes[6], (702, 700, "thefuck".to_string()));
+    }
+
+    #[test]
+    fn parses_ps_output_of_linux() {
+        let processes = parse_ps("  10   1 bash\n  11  10 thefuck\ngarbage\n");
+        assert_eq!(
+            processes,
+            [(10, 1, "bash".to_string()), (11, 10, "thefuck".to_string())]
+        );
+    }
 }

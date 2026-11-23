@@ -77,10 +77,18 @@ impl Shell for Zsh {
     }
 
     fn how_to_configure(&self) -> Option<ShellConfiguration> {
-        Some(ShellConfiguration::new(
+        // zsh always reads it, interactive login shells of macOS terminals
+        // too, so it's created when missing; a fresh macOS has none.
+        let config = match std::env::var("ZDOTDIR") {
+            Ok(zdotdir) if !zdotdir.is_empty() => {
+                format!("{}/.zshrc", zdotdir.trim_end_matches('/'))
+            }
+            _ => "~/.zshrc".to_string(),
+        };
+        Some(ShellConfiguration::created_if_missing(
             "eval $(thefuck --alias)",
-            "~/.zshrc",
-            "source ~/.zshrc",
+            &config,
+            &format!("source {}", config),
         ))
     }
 

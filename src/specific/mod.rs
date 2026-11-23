@@ -4,6 +4,7 @@ pub mod archlinux;
 pub mod brew;
 pub mod git;
 pub mod npm;
+pub mod subcommands;
 pub mod sudo;
 pub mod url;
 

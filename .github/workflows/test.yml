@@ -4,7 +4,11 @@ on: [push, pull_request]
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -16,3 +20,36 @@ jobs:
         run: cargo clippy --all-targets --locked -- -D warnings
       - name: Run tests
         run: cargo test --locked
+
+  # The installer and the updater, the way users run them.
+  install:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install
+        # Installs the pushed commit instead of the default branch.
+        run: sed "s|^REPO=.*|REPO=\"file://$PWD\"|" install.sh | sh
+        env:
+          THEFUCK_INSTALL_ROOT: ${{ runner.temp }}/thefuck
+          THEFUCK_NO_NEW_SHELL: "1"
+      - name: Use it
+        run: |
+          export PATH="$RUNNER_TEMP/thefuck/bin:$PATH"
+          thefuck --version
+          thefuck --alias | grep -q 'TF_ALIAS=fuck'
+          # Only `no_command`: on Ubuntu `apt_get` comes first, offering to
+          # install a package named like the typo. Not `gti`, it's as close to
+          # `tic` as to `git`, and without history it can become either.
+          TF_SHELL=bash THEFUCK_RULES=no_command HISTFILE=/dev/null thefuck -y gitt status 2>&1 | tee fixed
+          grep -q 'git status' fixed
+      - name: Update
+        run: |
+          export PATH="$RUNNER_TEMP/thefuck/bin:$PATH"
+          THEFUCK_REPOSITORY="file://$PWD" fuck --update

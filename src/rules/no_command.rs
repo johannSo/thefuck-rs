@@ -1,4 +1,5 @@
 use super::prelude::*;
+use crate::specific::subcommands::fix_subcommand;
 
 fn match_(command: &Command) -> bool {
     sudo_support(command, |command| {
@@ -31,7 +32,18 @@ fn get_new_command(command: &Command) -> Vec<String> {
             }
         }
 
-        new_cmds.iter().map(|cmd| command.script.replacen(old_command.as_str(), cmd, 1)).collect()
+        // A mistyped subcommand is fixed too, `gti atus` becomes `git status`
+        // right away instead of `git atus` that needs fixing once more.
+        let mut new_scripts: Vec<String> = Vec::new();
+        for cmd in &new_cmds {
+            let new_command = command.with_script(command.script.replacen(old_command.as_str(), cmd, 1));
+            for script in fix_subcommand(&new_command) {
+                if !new_scripts.contains(&script) {
+                    new_scripts.push(script);
+                }
+            }
+        }
+        new_scripts
     })
 }
 

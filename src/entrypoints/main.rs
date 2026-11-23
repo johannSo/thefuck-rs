@@ -5,6 +5,7 @@ use crate::shells::shell;
 use super::alias::print_alias;
 use super::fix_command::fix_command;
 use super::shell_logger::shell_logger;
+use super::update;
 
 /// Entry point of the `thefuck` binary.
 pub fn main() {
@@ -18,6 +19,8 @@ pub fn main() {
         argument_parser::print_help();
     } else if known_args.version {
         logs::version(crate::version(), &shell().info());
+    } else if known_args.update {
+        update::main();
     // It's important to check if an alias is being requested before checking if
     // `TF_HISTORY` is in `os.environ`, otherwise it might mess with subshells.
     // Check https://github.com/nvbn/thefuck/issues/921 for reference
